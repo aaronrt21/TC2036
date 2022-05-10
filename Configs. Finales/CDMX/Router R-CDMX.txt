@@ -1,0 +1,132 @@
+---------- Router R-CDMX ---------
+
+enable
+config t
+hostname R-CDMX
+
+no ip domain-lookup
+
+enable secret tc2036
+
+service password-enc
+
+line con 0
+password tc2036
+login
+logging sync
+
+banner motd  #
+|------      Equipo 4     ------|
+|---- El equipo más chingon ----|
+#
+
+! Dar de alta los usuarios que podrán entrar a gestionar los equipos
+username CIT privilege 15 secret tc2036
+
+! Para activar el protocolo SSH en los equipos de interconexión
+ip domain-name NewPOC.com
+crypto key generate rsa
+yes
+1024
+line vty 0 4
+login local
+transport input ssh
+
+int s0/0/0
+ip add 152.78.212.18  255.255.255.252
+desc Interfaz de interconexión ISP-Internet .
+no shut
+ip nat outside
+
+
+! Definición de subinterfaces {10,20,750} en int g0/0 
+! Sección para crear las subinterfaces asociadas a cada VLAN
+
+int g0/0.10
+description Subinterfaz de ServersCDMX
+encapsulation dot1q 10
+ip address 172.16.0.134 255.255.255.248
+ip nat inside
+
+int g0/0.20
+description Subinterfaz de EmpleadosCDMX
+encapsulation dot1q 20
+ip address 172.16.0.126 255.255.255.128
+ip nat inside
+
+int g0/0.750
+description Subinterfaz de AdminCDMX
+encapsulation dot1q 750
+ip address 172.16.0.138 255.255.255.252
+ip nat inside
+
+! Al final, hay que activar la interfaz física correspondiente
+int g0/0
+no shut
+
+int g0/1
+ip add 192.168.0.5  255.255.255.0
+desc Conexion con MPLS
+no shut
+
+! Se exluyen las direcciones IP que van a utilizar los equipos terminales del
+! segmento de Servidores
+ip dhcp excluded-address 172.16.0.129 172.16.0.132
+
+ip dhcp pool EmpleadosCDMX
+network 172.16.0.0 255.255.255.128
+default-router 172.16.0.126
+dns-server 8.8.8.8
+
+! Definir NAT estático
+ip nat inside source static 172.16.0.129  152.78.211.251
+ip nat inside source static 172.16.0.130  152.78.211.252
+ip nat inside source static 172.16.0.131  152.78.211.253
+ip nat inside source static 172.16.0.132  152.78.211.254
+
+!Def del pool para NAT dinamico
+ip nat pool CDMX 152.78.211.0  152.78.211.250 netmask 255.255.255.0
+
+! Definir quién puede acceder al NAT dinámico
+access-list 1 permit 172.16.0.0  0.0.0.255
+
+! Asociar el POOL de IP públicas y la lista de permisos al NAT o PAT dinámico
+ip nat inside source list 1 pool CDMX
+
+
+! Para conectarnos con el proveedor de servicio es necesario
+! establecer la ruta por default para sacar todo el tráfico por la interfaz indicada.
+ip route 0.0.0.0  0.0.0.0 s0/0/0
+
+! En el modo de configuración de la terminal debemos definir el protocolo y un ID asociado
+router ospf 2021
+
+! Agregar las redes/subredes directamente conectadas que se desean anunciar
+network  172.16.0.128  0.0.0.7 area 0
+network  172.16.0.0    0.0.0.127 area 0
+network  152.78.212.16 0.0.0.3  area 0
+
+default-information originate
+
+redistribute eigrp 2021 subnets
+
+
+! Es recomendable que las interfaces de router que NO interconectan más routers sean configuradas como pasivas.
+
+passive-interface s0/0/0
+passive-interface g0/0.10
+passive-interface g0/0.20
+passive-interface g0/0.750
+
+! Programación de protocolo de ruteo dinámico EIGRP
+router eigrp 2021
+network 192.168.0.0
+network 172.16.0.0
+network 152.78.212.16
+redistribute static
+redistribute ospf 2021 metric 10000 100 255 1 1500
+passive-interface s0/0/0
+passive-interface g0/0.10
+passive-interface g0/0.20
+passive-interface g0/0.750
+

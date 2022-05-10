@@ -1,0 +1,63 @@
+---------- Switch S-CDMX --------
+enable
+config t
+hostname S-CDMX
+
+no ip domain-lookup
+
+enable secret tc2036
+
+service password-enc
+
+line con 0
+password tc2036
+login
+logging sync
+
+banner motd  #
+|---- Equipo 4 ----|
+#
+
+! Dar de alta los usuarios que podrán entrar a gestionar los equipos
+username CIT privilege 15 secret tc2036
+
+! Para activar el protocolo SSH en los equipos de interconexión, es necesario dar de alta nuestro dominio (solo es local):
+ip domain-name NewPOC.com
+crypto key generate rsa
+yes
+1024
+line vty 0 4
+login local
+transport input ssh
+
+! Creación de VLANs {10,20,750} 
+
+vlan 10
+name EmpleadosCDMX
+vlan 20
+name ServiciosCDMX
+vlan 750
+name AdminCDMX
+
+
+! Asignación de puertos del switch a la VLAN correspondiente
+int F0/1
+switchport mode access
+switchport access vlan 10
+
+int F0/2
+switchport mode access
+switchport access vlan 20
+
+int F0/23
+switchport mode access
+switchport access vlan 750
+
+
+
+! Definición de puertos trunk.
+
+int range g0/1-02
+switchport mode trunk
+no shut
+ 

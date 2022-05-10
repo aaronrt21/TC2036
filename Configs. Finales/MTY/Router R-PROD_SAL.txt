@@ -1,0 +1,100 @@
+---------- Router R-PROD_SAL ---------
+
+enable
+config t
+hostname R-PROD_SAL
+
+no ip domain-lookup
+
+enable secret tc2036
+
+service password-enc
+
+line con 0
+password tc2036
+login
+logging sync
+
+banner motd  #
+|---- Equipo 4 ----|
+#
+
+! Dar de alta los usuarios que podrán entrar a gestionar los equipos
+username CIT privilege 15 secret tc2036
+
+! Para activar el protocolo SSH en los equipos de interconexión
+ip domain-name NewPOC.com
+crypto key generate rsa
+yes
+1024
+line vty 0 4
+login local
+transport input ssh
+
+int s0/1/0
+ip add 172.16.7.38 255.255.255.252
+desc Interfaz de interconexión con la oficina de SAL
+no shut
+
+! Definición de subinterfaces {14,24,34,44} en int g0/0 
+! Sección para crear las subinterfaces asociadas a cada VLAN
+
+int g0/0.14
+description Subinterfaz de EmpleadosCPSAL
+encapsulation dot1q 14
+ip address 172.16.6.222 255.255.255.224
+
+int g0/0.24
+description Subinterfaz de SenAmbientalesSAL
+encapsulation dot1q 24
+ip address 172.16.6.254 255.255.255.224
+
+int g0/0.34
+description Subinterfaz de SenSueloSAL
+encapsulation dot1q 34
+ip address 172.16.6.126 255.255.255.128
+
+int g0/0.44
+description Subinterfaz de ServiciosCPSAL
+encapsulation dot1q 44
+ip address 172.16.7.30 255.255.255.240
+
+! Al final, hay que activar la interfaz física correspondiente
+int g0/0
+no shut
+
+! Se exluyen las direcciones IP que van a utilizar los equipos terminales del
+! segmento de Servicios
+ip dhcp excluded-address 172.16.7.17 172.16.7.21
+
+ip dhcp pool EmpleadosCPSAL
+network 172.16.6.192 255.255.255.224
+default-router 172.16.6.222
+dns-server 8.8.8.8
+
+ip dhcp pool SenAmbientalesSAL
+network 172.16.6.224 255.255.255.224
+default-router 172.16.6.254
+dns-server 8.8.8.8
+
+ip dhcp pool SenSueloSAL
+network 172.16.6.0 255.255.255.128
+default-router 172.16.6.126
+dns-server 8.8.8.8
+
+! En el modo de configuración de la terminal debemos definir el protocolo y un ID asociado
+router ospf 2021 
+
+! Agregar las redes/subredes directamente conectadas que se desean anunciar
+network  172.16.6.192 0.0.0.31 area 0
+network  172.16.6.224 0.0.0.31 area 0
+network  172.16.6.0 0.0.0.127 area 0
+network  172.16.7.16 0.0.0.15 area 0
+network  172.16.7.36 0.0.0.3 area 0
+
+! Es recomendable que las interfaces de router que NO interconectan más routers sean configuradas como pasivas.
+
+passive-interface g0/0.14
+passive-interface g0/0.24
+passive-interface g0/0.34
+passive-interface g0/0.44

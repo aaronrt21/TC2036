@@ -1,0 +1,68 @@
+---------- Switch S-PROD_QRO --------
+enable
+config t
+hostname S-PROD_QRO
+no ip domain-lookup
+
+enable secret tc2036
+
+service password-enc
+
+line con 0
+password tc2036
+login
+logging sync
+
+banner motd  #
+|---- Equipo 4 ----|
+#
+
+! Dar de alta los usuarios que podrán entrar a gestionar los equipos
+username sysadmin privilege 15 secret tc2036
+
+! Para activar el protocolo SSH en los equipos de interconexión, es necesario dar de alta nuestro dominio (solo es local):
+ip domain-name NewPOC.com
+crypto key generate rsa
+yes
+1024
+line vty 0 4
+login local
+transport input ssh
+
+! Creación de VLANs {11,21,777} 
+
+vlan 12
+name EmpleadosCPQro
+vlan 22
+name SenAmbientalesQro
+vlan 32
+name SenSueloQro
+vlan 42
+name ServiciosCPQro
+
+
+
+! Asignación de puertos del switch a la VLAN correspondiente
+interface range F0/1
+switchport mode access
+switchport access vlan 12
+
+interface range F0/2
+switchport mode access
+switchport access vlan 22
+
+interface range F0/3
+switchport mode access
+switchport access vlan 32
+
+interface range F0/4
+switchport mode access
+switchport access vlan 42
+
+
+
+! Definición de puertos trunk.
+
+int g0/1
+switchport mode trunk
+no shut

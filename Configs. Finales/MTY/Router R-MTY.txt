@@ -1,0 +1,136 @@
+---------- Router R-QRO ---------
+
+enable
+config t
+hostname R-MTY
+
+no ip domain-lookup
+
+enable secret tc2036
+
+service password-enc
+
+line con 0
+password tc2036
+login
+logging sync
+
+banner motd  #
+|------      Equipo 4     ------|
+#
+
+! Dar de alta los usuarios que podrán entrar a gestionar los equipos
+username CIT privilege 15 secret tc2036
+
+! Para activar el protocolo SSH en los equipos de interconexión
+ip domain-name NewPOC.com
+crypto key generate rsa
+yes
+1024
+line vty 0 4
+login local
+transport input ssh
+
+int s0/1/0
+ip add 130.107.89.250 255.255.255.252
+desc Interfaz de interconexión ISP-Internet .
+no shut
+ip nat outside
+
+int s0/1/1
+ip add 172.16.7.37 255.255.255.252
+desc Interfaz de interconexión oficina-centro de prod.
+no shut
+ip nat inside
+
+
+
+! Definición de subinterfaces {13,23,751} en int g0/0 
+! Sección para crear las subinterfaces asociadas a cada VLAN
+
+int g0/0.13
+description Subinterfaz de EmpleadosMty 
+encapsulation dot1q 13
+ip address 172.16.6.190 255.255.255.192
+ip nat inside
+
+int g0/0.23
+description Subinterfaz de ServiciosMty
+encapsulation dot1q 23
+ip address 172.16.7.14 255.255.255.240
+ip nat inside
+
+int g0/0.751
+description Subinterfaz de AdminQro
+encapsulation dot1q 751
+ip address 172.16.7.34 255.255.255.252
+ip nat inside
+
+! Al final, hay que activar la interfaz física correspondiente
+int g0/0
+no shut
+
+int g0/1
+ip add 192.168.0.1  255.255.255.0
+desc Conexion con MPLS
+no shut
+
+! Se exluyen las direcciones IP que van a utilizar los equipos terminales del
+! segmento de Servicios
+ip dhcp excluded-address 172.16.7.1 172.16.7.5
+
+ip dhcp pool EmpleadosQro
+network 172.16.6.128 255.255.255.192
+default-router 172.16.6.190
+dns-server 8.8.8.8
+
+!Def del pool para NAT dinamico
+ip nat pool MTY 130.107.89.128 130.107.89.191 netmask 255.255.255.192
+
+! Definir quién puede acceder al NAT dinámico
+access-list 1 permit 172.16.6.0  0.0.0.255
+access-list 1 permit 172.16.7.0  0.0.0.255
+
+! Asociar el POOL de IP públicas y la lista de permisos al NAT o PAT dinámico
+ip nat inside source list 1 pool QRO overload
+
+
+! Para conectarnos con el proveedor de servicio es necesario
+! establecer la ruta por default para sacar todo el tráfico por la interfaz indicada.
+ip route 0.0.0.0  0.0.0.0 s0/1/0
+
+! En el modo de configuración de la terminal debemos definir el protocolo y un ID asociado
+router ospf 2021
+
+! Agregar las redes/subredes directamente conectadas que se desean anunciar
+network  172.16.6.128 0.0.0.63 area 0
+network  172.16.7.0 0.0.0.15 area 0
+network  172.16.7.32 0.0.0.3 area 0
+network  172.16.7.36 0.0.0.3 area 0
+network  130.107.89.248 0.0.0.3 area 0
+
+default-information originate
+
+redistribute eigrp 2021 subnets
+
+
+! Es recomendable que las interfaces de router que NO interconectan más routers sean configuradas como pasivas.
+
+passive-interface s0/1/0
+passive-interface g0/0.13
+passive-interface g0/0.23
+passive-interface g0/0.751
+
+! Programación de protocolo de ruteo dinámico EIGRP
+router eigrp 2021
+network 192.168.0.0
+network 172.16.6.0
+network 172.16.7.0
+redistribute static
+redistribute ospf 2021 metric 10000 100 255 1 1500
+passive-interface s0/1/0
+passive-interface s0/1/1
+passive-interface g0/0.13
+passive-interface g0/0.23
+passive-interface g0/0.751
+
