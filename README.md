@@ -13,9 +13,25 @@ El corporativo desea contar con un diseño de infraestructura estandarizado para
 
 Por tal motivo se te solicita realizar una prueba de concepto que le permita al corporativo analizar la viabilidad de un diseño estandarizado para oficinas y centros de producción para implementarlo en sus planes de expansión.
 
+## Problem Situation
+
+An organization focused in vegetable production and export has asked us to design and implement their computational infrastructure that will allow them to afront current connectivity needs and future growth.
+
+Currently, the corporation has its headquarters in Mexico City. They have offices in Guadalajara, Monterrey, Querétaro and León. They have vegetable production centers in Saltillo, Querétaro, Guadalajara and Silao.
+
+In the previous year the organization has seen accelerated growth due to high demand for their products in already-consolidated markets such as North America and Europe. For this reason, the directors are planning to open new production centers and new offices within the country.
+
+The corporation wishes a standarized infrastructure design for every office and production center, which will allow them to interconnect them and integrate them relatively easily.
+
+This is why you are being asked to elaborate a proof of concept that will allow the corporation analyze the viability of a standarized design for both offices and production centers to implement it in their expansion plans.
+
 ## Solución
 
 En el repositorio se puede encontrar el archivo de CISCO Packet Tracer, así como los archivos .txt que contienen la configuración de
 cada equipo de interconexión (routers y switches) de cada sede.
+
+## Solution
+
+Within the repository you may find the main CISCO Packet Tracer file, as well as the .txt files containing the configuration for every interconection device (routers and switches) for each office and production center.
 
 ![Vista General de la Red Final](https://user-images.githubusercontent.com/58449913/167527423-e80c2fb2-471b-4c29-9d63-ab9321d496d7.png)
